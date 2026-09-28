@@ -87,6 +87,14 @@ LibreHardwareMonitor 0.9.6 использует драйвер PawnIO: если 
 
 #
 
+### Примеры
+<img width="1917" height="943" alt="Screenshot_5" src="https://github.com/user-attachments/assets/acbebba2-0661-4f90-b488-de5cd59813c8" />
+<img width="1916" height="935" alt="Screenshot_7" src="https://github.com/user-attachments/assets/0ccadf5e-5611-46bb-bbae-97f1895373e2" />
+<img width="1916" height="940" alt="Screenshot_8" src="https://github.com/user-attachments/assets/00d44029-1224-4fbc-a991-119859587cb0" />
+<img width="1919" height="934" alt="Screenshot_6" src="https://github.com/user-attachments/assets/4998cb94-4ce3-4e71-b24e-ccbcb6f851d0" />
+
+#
+
 ### Благодарности
 [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - проект с открытым кодом (MPL-2.0).
 
