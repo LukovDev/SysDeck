@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru" data-theme="graphite">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#0a0c10">
+        <meta name="robots" content="noindex, nofollow">
+        <title>SysDeck · вход</title>
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='16' fill='%234c8dff'/%3E%3Cpath d='M36 8 16 36h14l-4 20 22-30H34z' fill='white'/%3E%3C/svg%3E">
+        <script>
+            try {
+                const t = JSON.parse(localStorage.getItem('sysdeck.theme'));
+                if (['graphite', 'mono', 'midnight', 'nord', 'forest', 'amber', 'rose', 'violet', 'teal', 'light'].includes(t)) document.documentElement.dataset.theme = t;
+            } catch (e) {}
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+        <style>
+            body { display: grid; place-items: center; padding: 16px; }
+            .login { width: min(100%, 380px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 28px 24px 24px; }
+            .login .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; margin-bottom: 6px; }
+            .login p { margin: 0 0 20px; color: var(--text-3); font-size: 13px; }
+            .login label.f { display: block; font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+            .login input[type=password] {
+                width: 100%; height: 42px; padding: 0 12px; font-size: 15px; background: var(--surface-2); border: 1px solid var(--border);
+                border-radius: var(--r-sm); -webkit-appearance: none; appearance: none;
+            }
+            .login .rem { display: flex; align-items: center; gap: 8px; margin: 14px 0 18px; font-size: 13px; color: var(--text-2); cursor: pointer; user-select: none; }
+            .login .rem input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+            .login button { width: 100%; height: 42px; justify-content: center; font-size: 14px; font-weight: 600; }
+            .login button:disabled { opacity: .55; cursor: default; }
+            .login .err { min-height: 20px; margin-top: 12px; font-size: 13px; color: var(--bad); text-align: center; }
+            .login.shake { animation: shake .35s; }
+            .login .lang { margin-top: 14px; text-align: center; font-size: 12px; color: var(--text-3); }
+            .login .lang a { cursor: pointer; }
+            @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+        </style>
+    </head>
+    <body>
+        <form class="login" id="f" autocomplete="on">
+            <div class="brand"><span class="logo-mark"><svg viewBox="0 0 64 64"><path d="M36 8 16 36h14l-4 20 22-30H34z"/></svg></span><b>SysDeck</b></div>
+            <p>Дашборд защищён паролем.</p>
+            <label class="f" for="pw">Пароль</label>
+            <input type="password" id="pw" name="password" autocomplete="current-password" autofocus required>
+            <label class="rem"><input type="checkbox" id="rem" checked><span id="remText">Запомнить на этом устройстве</span></label>
+            <button class="btn primary" id="go" type="submit">Войти</button>
+            <div class="err" id="err"></div>
+            <div class="lang"><a class="link" data-lang="en">English</a> · <a class="link" data-lang="ru">Русский</a></div>
+        </form>
+        <script src="i18n.js"></script>
+        <script>
+            const $ = s => document.querySelector(s);
+            translateDom(document.body);
+            document.title = i18n(document.title);
+            document.querySelectorAll('[data-lang]').forEach(a => { if (a.dataset.lang === LANG) a.style.opacity = '.5'; a.onclick = () => setLang(a.dataset.lang); });
+            const next = (() => { const n = new URLSearchParams(location.search).get('next') || '/'; return n.startsWith('/') && !n.startsWith('//') ? n : '/'; })();
+            let lockTimer = null;
+            // Уже вошли (или пароль не задан) - сразу на дашборд:
+            fetch('/api/auth').then(r => r.json()).then(a => {
+                if (!a.enabled || a.authorized) location.replace(next);
+                if (a.days) $('#remText').textContent = TR`Запомнить на ${a.days} дн.`;
+            }).catch(() => {});
+            function lock(sec) {
+                clearInterval(lockTimer);
+                const tick = () => {
+                    if (sec <= 0) { clearInterval(lockTimer); $('#go').disabled = false; $('#err').textContent = ''; return; }
+                    $('#go').disabled = true;
+                    $('#err').textContent = TR`Слишком много попыток. Подождите ${Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0')}`;
+                    sec--;
+                };
+                tick();
+                lockTimer = setInterval(tick, 1000);
+            }
+            $('#f').onsubmit = async e => {
+                e.preventDefault();
+                $('#go').disabled = true;
+                $('#err').textContent = '';
+                try {
+                    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+                        body: JSON.stringify({ password: $('#pw').value, remember: $('#rem').checked }) });
+                    const j = await r.json().catch(() => ({}));
+                    if (r.ok) { location.replace(next); return; }
+                    if (r.status === 429) { lock(j.retry || 60); return; }
+                    // Текст ошибки - по коду, на выбранном языке:
+                    if (j.code === 'bad_password') $('#err').textContent = TR`Неверный пароль (осталось попыток: ${j.left})`;
+                    else if (j.code === 'no_password') $('#err').textContent = i18n('Пароль ещё не задан: откройте SysDeck.pyw на компьютере с SysDeck');
+                    else $('#err').textContent = i18n('Ошибка входа');
+                    $('#f').classList.remove('shake'); void $('#f').offsetWidth; $('#f').classList.add('shake');
+                    $('#pw').select();
+                } catch { $('#err').textContent = i18n('Сервер не отвечает'); }
+                $('#go').disabled = false;
+            };
+        </script>
+    </body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru" data-theme="graphite">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#0a0c10">
+        <title>SysDeck</title>
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='16' fill='%234c8dff'/%3E%3Cpath d='M36 8 16 36h14l-4 20 22-30H34z' fill='white'/%3E%3C/svg%3E">
+        <script>
+            try {
+                const t = JSON.parse(localStorage.getItem('sysdeck.theme'));
+                if (['graphite', 'mono', 'midnight', 'nord', 'forest', 'amber', 'rose', 'violet', 'teal', 'light'].includes(t)) document.documentElement.dataset.theme = t;
+            } catch (e) {}
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    </head>
+    <body>
+        <header class="top">
+            <div class="hbar">
+                <div class="brand"><span class="logo-mark"><svg viewBox="0 0 64 64"><path d="M36 8 16 36h14l-4 20 22-30H34z"/></svg></span><b>SysDeck</b><span class="host" id="host"></span></div>
+                <nav class="seg nav" id="nav">
+                    <a href="#sec-sys" data-sec="sec-sys" class="on">Система</a>
+                    <a href="#sec-pow" data-sec="sec-pow">Питание</a>
+                </nav>
+                <div class="right">
+                    <span id="upsBadge" class="pill">ИБП</span>
+                    <span id="clock" class="clock"></span>
+                    <button id="langBtn" class="btn" title="Язык / Language"><span id="langName">EN</span></button>
+                    <button id="themeBtn" class="btn" title="Тема оформления"><i class="swatch"></i><span class="lbl" id="themeName">Тема</span></button>
+                    <button id="widgetsBtn" class="btn" title="Показать или скрыть виджеты">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span class="lbl">Виджеты</span></button>
+                    <button id="editBtn" class="btn" title="Перетаскивать и менять ширину виджетов">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="lbl">Раскладка</span></button>
+                    <button id="logoutBtn" class="btn icon" title="Выйти" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button>
+                </div>
+            </div>
+            <div class="hbar">
+                <div class="seg" id="presets">
+                    <button data-span="60">1м</button><button data-span="300">5м</button><button data-span="900">15м</button>
+                    <button data-span="3600">1ч</button><button data-span="21600">6ч</button><button data-span="86400">24ч</button>
+                    <button data-span="604800">7д</button><button data-span="2592000">30д</button>
+                </div>
+                <button id="live" class="btn live" title="Следить за текущим временем">Live</button>
+                <div class="seg">
+                    <button id="panL" title="Назад">◀</button>
+                    <button id="zoomOut" title="Отдалить">−</button>
+                    <button id="zoomIn" title="Приблизить">+</button>
+                    <button id="panR" title="Вперёд">▶</button>
+                </div>
+                <div class="range">
+                    <input type="datetime-local" id="from" step="1">
+                    <span>→</span>
+                    <input type="datetime-local" id="to" step="1">
+                    <button id="apply" class="btn">Показать</button>
+                </div>
+                <div class="seg" id="modeAll" title="Режим всех графиков сразу">
+                    <button data-mode="0">Вместе</button>
+                    <button data-mode="1">Раздельно</button>
+                </div>
+                <button id="helpBtn" class="btn icon" title="Управление графиками">?</button>
+                <span id="info" class="info">&nbsp;</span>
+            </div>
+            <div class="help" id="help" hidden>
+                <span><kbd>колесо</kbd> масштаб времени</span>
+                <span><kbd>Alt</kbd> + <kbd>колесо</kbd> влево / вправо</span>
+                <span><kbd>Ctrl</kbd> + <kbd>колесо</kbd> масштаб по высоте</span>
+                <span><kbd>перетаскивание</kbd> листать</span>
+                <span><kbd>двойной клик</kbd> сбросить высоту</span>
+                <span><kbd>Shift</kbd> + <kbd>колесо</kbd> или колесо над шкалой — прокрутка страницы</span>
+                <span>Телефон: <kbd>1 палец</kbd> листать · <kbd>2 пальца</kbd> масштаб по ширине и высоте · <kbd>тап</kbd> значения · <kbd>двойной тап</kbd> сброс высоты</span>
+            </div>
+            <div class="editbar" id="editbar" hidden>
+                <span class="grow">Тяните виджет за ⠿, меняйте ширину, скрывайте ненужное. Всё сохраняется в браузере.</span>
+                <button id="resetLayout" class="btn">Сбросить раскладку</button>
+                <button id="editDone" class="btn primary">Готово</button>
+            </div>
+        </header>
+
+        <section class="section" id="sec-sys">
+            <div class="sec-head"><h2>Система</h2><span class="sec-sub" id="sysSub">&nbsp;</span></div>
+            <div class="grid" id="grid-sys"></div>
+        </section>
+
+        <section class="section" id="sec-pow">
+            <div class="sec-head"><h2>Питание</h2><span class="sec-sub" id="powSub">&nbsp;</span></div>
+            <div class="grid" id="grid-pow"></div>
+        </section>
+
+        <footer class="foot">Made by <a href="https://github.com/LukovDev" target="_blank" rel="noopener">LukovDev</a></footer>
+
+        <div class="pop" id="widgetsMenu" hidden></div>
+        <div class="pop" id="themeMenu" hidden></div>
+        <div class="pop" id="chartMenu" hidden></div>
+        <div class="pop" id="authMenu" hidden></div>
+        <div class="ctip" id="ctip"></div>
+
+        <script src="i18n.js"></script>
+        <script src="app.js"></script>
+    </body>
+</html>
